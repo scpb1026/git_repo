@@ -39,7 +39,7 @@ def get_instrumentInfo():
 def get_code_and_listdate(symbol):
     "获取股票代码、上市日期、退市日期"
     if not isinstance(symbol, str):
-        raise TypeError('Type of symbol should be str.')
+        raise TypeError('Type of symbol must be str.')
     df = get_instrumentInfo()
     df = df[['symbol', 'name', 'list_date', 'delist_date']]
     df = df[df['symbol'] == symbol]
@@ -47,17 +47,23 @@ def get_code_and_listdate(symbol):
 
 
 def get_date(symbol):
-    "获取股票的start_date和end_date"
+    ''' 
+    获取股票的start_date和end_date
+    
+    返回：
+    symbol -> str
+    start_date -> int
+    end_date -> int
+    '''
     df = get_code_and_listdate(symbol)
 
-    list_date = df['list_date'].astype(int).iloc[0]
-    delist_date = df['delist_date'].astype(int).iloc[0]
+    list_date = df['list_date'].iloc[0]
+    delist_date = df['delist_date'].iloc[0]
 
     # 判定上市、退市日期和today的关系
     today = dt.today().strftime('%Y%m%d')
-    today = int(today)
-    start_date = list_date
-    end_date = min(today, delist_date)
+    start_date = int(list_date)
+    end_date = int(min(today, delist_date))
 
     res = {
         'symbol': symbol,
@@ -88,8 +94,7 @@ def save_financial_data(symbol):
 
     dv.init_from_config(props=props, data_api=ds)
     dv.prepare_data()
-    # dv.save_dataview(save_data_folder)
-    # print(dv.data_d)
+    dv.save_dataview(save_data_folder)
 
 
 if __name__ == '__main__':
