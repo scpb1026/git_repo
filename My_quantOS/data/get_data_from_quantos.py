@@ -36,7 +36,7 @@ def get_instrumentInfo():
     return df
 
 
-def get_code_and_listdate(symbol):
+def get_code_and_date(symbol):
     "获取股票代码、上市日期、退市日期"
     if not isinstance(symbol, str):
         raise TypeError('Type of symbol must be str.')
@@ -55,7 +55,7 @@ def get_date(symbol):
     start_date -> int
     end_date -> int
     '''
-    df = get_code_and_listdate(symbol)
+    df = get_code_and_date(symbol)
 
     list_date = df['list_date'].iloc[0]
     delist_date = df['delist_date'].iloc[0]
@@ -72,7 +72,7 @@ def get_date(symbol):
     return res
 
 
-def save_financial_data(symbol):
+def save_reference_daily_data(symbol):
     """
     保存单个股票的基本财务数据
     :param symbol: str
@@ -97,9 +97,43 @@ def save_financial_data(symbol):
     dv.save_dataview(save_data_folder)
 
 
-if __name__ == '__main__':
-    save_financial_data('600300.SH')
+def load_data():
+    dv = DataView()
+    dv.load_dataview(save_data_folder)
+    df = dv.data_d
+    return df
 
-    # print(dv.data_d)
-    # print(dv.data_inst)
-    # dv.data_d = dv.data_d.astype(int)
+
+def get_props():
+    df = load_data()
+    df.columns = df.columns.droplevel()
+    df.reset_index(inplace=True)
+    props = df.to_dict(orient='records')
+    return props
+
+
+def get_symbol_list():
+    symbol_list = get_instrumentInfo()['symbol'].tolist()
+    return symbol_list
+
+
+def write_data_into_dbase():
+    # symbol_list = get_symbol_list()
+    symbol_list = ['000001.SZ', '600300.SH']
+    
+    client = pymongo.MongoClient()
+    db = client.financial_data_of_stock_test
+
+    for symbol in symbol_list:
+        save_reference_daily_data(symbol)
+
+        collection = db[symbol]
+        collection.insert_many(get_props())
+        print("\n\nWrite data into DBase...\nSymbol: {}\n\n".format(symbol))
+    
+    client.close()
+
+
+
+if __name__ == '__main__':
+    write_data_into_dbase()
