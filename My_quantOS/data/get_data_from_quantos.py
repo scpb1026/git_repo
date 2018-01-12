@@ -1,5 +1,8 @@
 from datetime import datetime as dt
 import pymongo
+from multiprocessing.dummy import Pool
+import time
+
 from jaqs.data.dataapi import DataApi
 from jaqs.data.dataservice import RemoteDataService
 from jaqs.data.dataview import DataView
@@ -32,6 +35,7 @@ def get_instrumentInfo():
         filter="inst_type=1&status=1",
         data_format='pandas')
 
+    # 股票市场为沪市和深市，原数据包括港股
     df = df[(df['market'] == 'SH') | (df['market'] == 'SZ')]
     return df
 
@@ -98,6 +102,7 @@ def save_reference_daily_data(symbol):
 
 
 def load_data():
+    "从已保存的dataview中读取数据"
     dv = DataView()
     dv.load_dataview(save_data_folder)
     df = dv.data_d
@@ -105,6 +110,7 @@ def load_data():
 
 
 def get_props():
+    "将读取的dataframe转换为props, 以备写入数据库"
     df = load_data()
     df.columns = df.columns.droplevel()
     df.reset_index(inplace=True)
@@ -113,27 +119,50 @@ def get_props():
 
 
 def get_symbol_list():
+    "获取所有A股的代码列表"
     symbol_list = get_instrumentInfo()['symbol'].tolist()
     return symbol_list
 
 
 def write_data_into_dbase():
-    # symbol_list = get_symbol_list()
-    symbol_list = ['000001.SZ', '600300.SH']
+    "按照代码列表，将数据写入数据库"
+    symbol_list = get_symbol_list()
     
     client = pymongo.MongoClient()
-    db = client.financial_data_of_stock_test
+    db = client.reference_daily_data_of_stock
+
+    # 错误股票代码列表
+    error_list = []
 
     for symbol in symbol_list:
-        save_reference_daily_data(symbol)
+        try:
+            save_reference_daily_data(symbol)
 
-        collection = db[symbol]
-        collection.insert_many(get_props())
-        print("\n\nWrite data into DBase...\nSymbol: {}\n\n".format(symbol))
+            collection = db[symbol]
+            collection.insert_many(get_props())
+            print("\n\nWrite data into DBase...\nSymbol: {}\n\n".format(symbol))
+        except:
+            error_list.append(symbol)
     
     client.close()
+
+    # 将错误股票代码列表写入文件
+    with open(save_data_folder + 'error_list.csv', 'w') as f:
+        for symbol in error_list:
+            f.write(symbol)
+    
+
+def threading_do():
+    "多进程"
+    start_time = time.time()
+    pool = Pool(4)
+    pool.apply(write_data_into_dbase)
+    pool.close()
+    pool.join()
+    end_time = time.time()
+    print("\nMission Completed in {:.2f} second.".format(end_time - start_time))
 
 
 
 if __name__ == '__main__':
-    write_data_into_dbase()
+    threading_do()
