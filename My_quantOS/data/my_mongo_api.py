@@ -1,4 +1,7 @@
 # encoding: utf-8
+# Author:   Scpb1026
+# Github:   https://github.com/scpb1026
+# Version:  1.0.0
 
 import pandas as pd
 from pymongo import MongoClient
@@ -11,7 +14,7 @@ class MyMongoApi():
     查询主方法:   query
     -----------------------------------------------------------------------------
     参数                      说明
-    view         查询内容的类别, 即mongoDb的db名字，类型str    
+    view         查询内容的类别, 即mongoDB的db名字，类型str    
     start_date   开始日期, 类型int, 例如20170101
     end_date     结束日期, 类型int, 例如20170101
     symbol       查询股票代码, 类型str, 逗号隔开, 不能有空格, 例如'600000.SH,000001.SZ'
@@ -24,10 +27,10 @@ class MyMongoApi():
         self.client = None
         self.db = None
         self.col = None
-        self.start_date = None
-        self.end_date = None
-        self.symbol = None
-        self.fields = None
+        self.start_date = 0
+        self.end_date = 0
+        self.symbol = ""
+        self.fields = ""
 
 
     def login(self, db_name, col_name):
@@ -120,7 +123,7 @@ class MyMongoApi():
         return query_fields
 
 
-    def query(self, view, start_date, end_date, symbol, fields):
+    def query(self, view='reference_daily_data_of_stock', start_date=0, end_date=0, symbol="", fields=""):
         "根据字段查询数据的主函数"
         self.start_date = start_date
         self.end_date = end_date
@@ -159,6 +162,6 @@ class MyMongoApi():
 
 if __name__ == '__main__':
     api = MyMongoApi()
-    x = api.query('reference_daily_data_of_stock', 20041001,
+    df = api.query('reference_daily_data_of_stock', 20041001,
                   20041101, symbol='600000.SH,600016.SH,600300.SH', fields='pe,pb')
-    print(x)
+    print(df)

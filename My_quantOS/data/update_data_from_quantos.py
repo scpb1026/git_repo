@@ -1,3 +1,8 @@
+# encoding: utf-8
+# Author:   Scpb1026
+# Github:   https://github.com/scpb1026
+# Version:  0.5.0
+
 import time
 from datetime import datetime, timedelta
 from multiprocessing.dummy import Pool as ThreadPool
@@ -12,11 +17,11 @@ from jaqs.data.dataview import DataView
 
 data_config = {
     "remote.data.address": "tcp://data.tushare.org:8910",
-    "remote.data.username": "13916302001",
-    "remote.data.password": "eyJhbGciOiJIUzI1NiJ9.eyJjcmVhdGVfdGltZSI6IjE1MTU4MDU5MzA0ODciLCJpc3MiOiJhdXRoMCIsImlkIjoiMTM5MTYzMDIwMDEifQ.0U0UO6m_0IiELOA-YVZr1Dpdw-d8bekfK7vUPLyIXoQ"
+    "remote.data.username": "yourphone",
+    "remote.data.password": "yourtoken"
 }
 
-save_data_folder = './output/get_data_quantOS/dataview/'
+# save_data_folder = './output/get_data_quantOS/dataview/'
 
 ds = RemoteDataService()
 ds.init_from_config(data_config)
@@ -211,7 +216,7 @@ def get_latest_trade_date_in_dbase(symbol):
 
 
 def get_trade_date_update(symbol):
-    "增量更新时的开始和结束日期，返回int"
+    "增量更新时的开始和结束日期，返回dict"
     today = datetime.today().strftime('%Y%m%d')
     latest_trade_date = get_latest_trade_date_in_dbase(symbol)
     latest_trade_date = datetime.strptime(latest_trade_date, '%Y%m%d')
