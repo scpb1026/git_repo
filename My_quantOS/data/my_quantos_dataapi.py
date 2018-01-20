@@ -36,7 +36,8 @@ class MyQuantosDataApi():
         self._dataview_data = pd.DataFrame()
         self._dbase_props = {}
         self._db_init_config = ['reference_daily_fields']
-        self._input_init_config = []
+        # self._input_init_config = []
+        self._data_status = 0
         
 
     def _login(self, dataapi=False, remote=False, mongodb=False):
@@ -57,45 +58,66 @@ class MyQuantosDataApi():
         if mongodb:
             # 连接mongoDB
             self._client = pymongo.MongoClient(host='localhost', port=27017)
-            # 连接db和collection
-            self._db = self._client[self._db_name]
-            self._col_name = self.symbol
-            self._col = self._db[self._col_name]
-            # 获得db和collection的名称列表
-            self._db_list = self._client.list_database_names()
+    
+
+    def _logout(self):
+        "登出mongoDB数据库"
+        self._client.close()
+
+
+    def _set_data_status(self):
+        '''
+        判断是首次下载，或增量更新数据
+        首次下载，则self._data_status = 1
+        增量更新，则self._data_status = 2
+        同时，返回去掉默认数据库后的db列表和collection列表
+        '''
+        self._login(mongodb=True)
+        self._db_list = self._client.list_database_names()
+        # 去掉默认的数据库，admin和local
+        self._db_list = self._db_list.remove('admin')
+        self._db_list = self._db_list.remove('local')
+        if self._db_list == []:
+            self._data_status = 1
+            self._client.close()
+        else:
             self._col_list = self._db.collection_names()
+            self._data_status = 2
+            self._client.close()
+        
 
-
-    def prepare_data(self, first=False, update=False):
-        self._get_fields()
+    def _prepare_data(self):
+        self._set_data_status()
+        self._set_fields()
         self._login(dataapi=True, remote=True)
         self._get_instrumentInfo()
         self._get_symbol_set_all_A()
 
-        if first:
-            self._db_name = self._fields_init_config
+        if self._data_status == 1:
+            self._db_name = self._db_init_config[0]
             self._col_name = self.symbol
             self._get_start_end_date_first_time()
 
-        if update:
-            self._login(mongodb=True)
+        if self._data_status == 2:
+            
             self._get_start_end_date_update()
 
 
-    def _get_input_init_config(self):
-        "确定最终多线程map函数的输入列表，返回[(db_name, col_name)]"
-        for db_name in self._db_init_config:
-            for col_name in self._symbol_set_all_A:
-                self._input_init_config.append(db_name, col_name)
+    # def _get_input_init_config(self):
+    #     "确定最终多线程map函数的输入列表，返回[(db_name, col_name)]"
+    #     for db_name in self._db_init_config:
+    #         for col_name in self._symbol_set_all_A:
+    #             self._input_init_config.append(db_name, col_name)
 
 
-    def _get_fields(self):
+    def _set_fields(self):
         "确定查询字段，同时也确定mongoDB的db_name"
         dv = DataView()
         fields_init_config = {
             'reference_daily_fields': dv.reference_daily_fields
             # 此处可能增加新的字段，只要是qunatos的dataview支持的字段
             }
+        self.fields = fields_init_config.get('reference_daily_fields')
 
 
     def _get_instrumentInfo(self):
